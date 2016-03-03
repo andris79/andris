@@ -1,17 +1,34 @@
 
+import asyncore
 import socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('0.0.0.0', 2222))
-s.listen(1)
-conn, addr = s.accept()
-while True:
-    dataapi = conn.recv(1024)
-    data = str(dataapi)
-    if data.find('close') == -1 :
-        conn.send(dataapi)
-        print ('not close')
-    else :
-        print("brek")
-        break
-print(data)
-conn.close()
+
+
+class EchoHandler(asyncore.dispatcher_with_send):
+    def handle_read(self):
+        data = self.recv(1024)
+        if data:
+            dataapi = str(data)
+            if dataapi.find('close') == -1:
+                self.send(data)
+            else:
+             #   print('closeee')
+                self.close()
+
+
+class EchoServer(asyncore.dispatcher):
+    def __init__(self, host, port):
+        asyncore.dispatcher.__init__(self)
+        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
+        self.bind((host, port))
+        self.listen(10)
+
+    def handle_accept(self):
+        pair =self.accept()
+        if pair is not None:
+            sock, addr = pair
+            print ('Incomming connection from %s' % repr(addr))
+            handler = EchoHandler(sock)
+server = EchoServer('0.0.0.0', 2222)
+asyncore.loop()
+
